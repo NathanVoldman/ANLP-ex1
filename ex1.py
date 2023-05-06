@@ -30,11 +30,13 @@ def compute_metrics(eval_pred):
         predictions=predictions, references=labels)["accuracy"]
     return {"accuracy": accuracy}
 
+
 def get_tokenize_function(tokenizer):
     def preprocess_function(examples):
         return tokenizer(examples["sentence"], truncation=True)
 
     return preprocess_function
+
 
 def get_trainer(model, tokenizer, train_set, val_set, rand_seed, model_name):
     set_seed(rand_seed)
@@ -64,62 +66,29 @@ def get_trainer(model, tokenizer, train_set, val_set, rand_seed, model_name):
 
     return trainer
 
+
 def finetune_model(trainer):
     train_output = trainer.train()
     return train_output.metrics
-    # wandb.finish()
 
-    # predictions, _, _ = trainer.predict(tokenized_val)
-    # return train_output.metrics, val_metrics
 
 def evaluate_model(trainer):
     val_metrics = trainer.evaluate()
     return val_metrics
-    
 
-# def get_preds_from_model(trainer, test_set):
-#     preprocess_function = get_tokenize_function(trainer.tokenizer)
-#     tokenized_test = test_set.map(preprocess_function, batched=True)
-#     predictions, _, metrics = trainer.predict(tokenized_test)
-#     test_accuracy = metrics['test_accuracy']
-#     print(f'test accuracy: {test_accuracy}')
-    
-#     return predictions
 
 def get_test_pred(model, tokenizer, test_set):
-    classifier = pipeline('sentiment-analysis', model=model, tokenizer=tokenizer, device=0)
+    classifier = pipeline('sentiment-analysis', model=model,
+                          tokenizer=tokenizer, device=0)
     predictions = classifier(test_set['sentence'])
     predictions = [prediction['label'][-1] for prediction in predictions]
     predictions_text_list = [f'{sentence}###{prediction}' for sentence,
-                   prediction in zip(test_set['sentence'], predictions)]
+                             prediction in zip(test_set['sentence'], predictions)]
     predictions_text = '\n'.join(predictions_text_list)
 
     with open('predictions.txt', 'w') as pred_writer:
         pred_writer.write(predictions_text)
 
-
-# def get_test_pred(trainer, test_set):
-#     predictions = get_preds_from_model(trainer, test_set)
-#     predictions_text_list = [f'{sentence}###{bin_pred}' for sentence,
-#                    bin_pred in zip(test_set['sentence'], predictions)]
-#     predictions_text = '\n'.join(predictions_text_list)
-
-#     with open('predictions.txt', 'w') as pred_writer:
-#         pred_writer.write(predictions_text)
-
-# def get_test_pred(model, tokenizer, test_set):
-#     tokenized_test_set = tokenizer(
-#         test_set['sentence'], truncation=True, padding=True, return_tensors='pt').to(model.device)
-
-#     model.eval()
-#     preds = model(**tokenized_test_set)
-#     bin_preds = preds['logits'].argmax(1)
-#     predictions = [f'{sentence}###{bin_pred}' for sentence,
-#                    bin_pred in zip(test_set['sentence'], bin_preds)]
-#     predictions_text = '\n'.join(predictions)
-
-#     with open('predictions.txt', 'w') as pred_writer:
-#         pred_writer.write(predictions_text)
 
 def main():
     args = sys.argv[1:]
@@ -146,8 +115,9 @@ def main():
         for rand_seed in range(num_seeds):
             model = AutoModelForSequenceClassification.from_pretrained(
                 model_name, num_labels=2)
-            
-            trainer = get_trainer(model, tokenizer, train_set, val_set, rand_seed, model_name)
+
+            trainer = get_trainer(
+                model, tokenizer, train_set, val_set, rand_seed, model_name)
             train_metrics = finetune_model(trainer)
             val_metrics = evaluate_model(trainer)
             wandb.finish()
@@ -180,7 +150,8 @@ def main():
     # (acc, model, tokenizer)
     best_seed_details = best_model_details[best_seed]
     best_acc = best_seed_details[0]
-    print(f'best model is: {best_model_name}, best seed is: {best_seed}, best accuracy of chosen model is: {best_acc}')
+    print(
+        f'best model is: {best_model_name}, best seed is: {best_seed}, best accuracy of chosen model is: {best_acc}')
 
     best_model = best_seed_details[1]
     best_tokenizer = best_seed_details[2]
