@@ -5,7 +5,7 @@ import wandb
 import numpy as np
 import os
 import sys
-
+import time
 
 def cut_dataset(dataset, num_samples):
     num_samples = len(dataset) if num_samples == -1 else num_samples
@@ -39,8 +39,6 @@ def get_tokenize_function(tokenizer):
 
 
 def get_trainer(model, tokenizer, train_set, val_set, rand_seed, model_name):
-    set_seed(rand_seed)
-
     preprocess_function = get_tokenize_function(tokenizer)
     tokenized_train = train_set.map(preprocess_function, batched=True)
     tokenized_val = val_set.map(preprocess_function, batched=True)
@@ -80,7 +78,12 @@ def evaluate_model(trainer):
 def get_test_pred(model, tokenizer, test_set):
     classifier = pipeline('sentiment-analysis', model=model,
                           tokenizer=tokenizer, device=0)
-    predictions = classifier(test_set['sentence'])
+    
+    start_time = time.time()
+    predictions = classifier(test_set['sentence'], padding=False)
+    end_time = time.time()
+    prediction_time = end_time - start_time
+
     predictions = [prediction['label'][-1] for prediction in predictions]
     predictions_text_list = [f'{sentence}###{prediction}' for sentence,
                              prediction in zip(test_set['sentence'], predictions)]
@@ -89,6 +92,7 @@ def get_test_pred(model, tokenizer, test_set):
     with open('predictions.txt', 'w') as pred_writer:
         pred_writer.write(predictions_text)
 
+    return prediction_time
 
 def main():
     args = sys.argv[1:]
@@ -106,7 +110,6 @@ def main():
     # model_name => list of (acc, model, tokenizer) where the index is also the seed
     model_details = defaultdict(list)
     train_time = 0
-    predict_time = 0
     res = ""
 
     for model_name in model_names:
@@ -126,17 +129,12 @@ def main():
             curr_acc = val_metrics['eval_accuracy']
             model_details[model_name].append((curr_acc, model, tokenizer))
             train_time += train_metrics['train_runtime']
-            predict_time += val_metrics['eval_runtime']
 
         model_acc_list = [details[0] for details in model_details[model_name]]
         res += f'{model_name},{np.mean(model_acc_list)} +- {np.std(model_acc_list)}\n'
 
     res += '----\n'
     res += f'train_time,{train_time}\n'
-    res += f'predict_time,{predict_time}'
-
-    with open('res.txt', 'w') as res_writer:
-        res_writer.write(res)
 
     # model name -> mean model accuracy
     model_mean_acc = {key: np.mean(
@@ -156,7 +154,13 @@ def main():
     best_model = best_seed_details[1]
     best_tokenizer = best_seed_details[2]
 
-    get_test_pred(best_model, best_tokenizer, test_set)
+    prediction_time = get_test_pred(best_model, best_tokenizer, test_set)
+    res += f'predict_time,{prediction_time}'
+
+    with open('res.txt', 'w') as res_writer:
+        res_writer.write(res)
+
+
 
 
 if __name__ == "__main__":
