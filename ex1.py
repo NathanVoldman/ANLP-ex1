@@ -7,6 +7,7 @@ import os
 import sys
 import time
 
+
 def cut_dataset(dataset, num_samples):
     num_samples = len(dataset) if num_samples == -1 else num_samples
     return dataset.select([i for i in range(num_samples)])
@@ -78,7 +79,7 @@ def evaluate_model(trainer):
 def get_test_pred(model, tokenizer, test_set):
     classifier = pipeline('sentiment-analysis', model=model,
                           tokenizer=tokenizer, device=0)
-    
+
     start_time = time.time()
     predictions = classifier(test_set['sentence'], padding=False)
     end_time = time.time()
@@ -93,6 +94,7 @@ def get_test_pred(model, tokenizer, test_set):
         pred_writer.write(predictions_text)
 
     return prediction_time
+
 
 def main():
     args = sys.argv[1:]
@@ -159,8 +161,6 @@ def main():
 
     with open('res.txt', 'w') as res_writer:
         res_writer.write(res)
-
-
 
 
 if __name__ == "__main__":
