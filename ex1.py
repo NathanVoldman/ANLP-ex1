@@ -47,7 +47,7 @@ def get_trainer(model, tokenizer, train_set, val_set, rand_seed, model_name):
 
     training_args = TrainingArguments(
         output_dir=".",
-        report_to="wandb",
+        report_to="none",
         save_strategy="no",
         data_seed=rand_seed,
         run_name=f'{model_name}-{rand_seed}'
@@ -125,7 +125,7 @@ def main():
                 model, tokenizer, train_set, val_set, rand_seed, model_name)
             train_metrics = finetune_model(trainer)
             val_metrics = evaluate_model(trainer)
-            wandb.finish()
+            # wandb.finish()
             # get_preds_from_model(trainer, test_set)
 
             curr_acc = val_metrics['eval_accuracy']
@@ -166,6 +166,6 @@ def main():
 if __name__ == "__main__":
     os.environ['HF_DATASETS_CACHE'] = './hf_cache'
     os.environ['HF_HOME'] = './hf_home'
-    os.environ['WANDB_PROJECT'] = "ANLP-ex1"
-    wandb.login()
+    # os.environ['WANDB_PROJECT'] = "ANLP-ex1"
+    # wandb.login()
     main()
